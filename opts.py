@@ -9,13 +9,12 @@ import numpy as np
 class opts():
     def __init__(self):
         self.parser = argparse.ArgumentParser()
-        self.parser.add_argument('-expID', default='resnet50', help='Experiment ID')
+        self.parser.add_argument('-expID', default='rn50-color-FT20', help='Experiment ID')
         self.parser.add_argument('-GPU', type=int, default=2, help='GPU id')
         self.parser.add_argument('-nThreads', type=int, default=8, help='nThreads')
-        # self.parser.add_argument('-test', action='store_true', help='test phase')
-        self.parser.add_argument('-loadModel', default='', help='Provide full path to a previously trained model')
-        self.parser.add_argument('-arch', default='resnet50',
-                                 help='network architecture')  # resnet50 resnet101 vgg16_bn
+        self.parser.add_argument('-test', default='test', action='store_true', help='test phase')
+        # self.parser.add_argument('-loadModel', default='', help='Provide full path to a previously trained model')
+        self.parser.add_argument('-arch', default='resnet50', help='network architecture')  # resnet50 resnet101 vgg16_bn
 
         self.parser.add_argument('-LR', type=float, default=0.01, help='Learning Rate')
         self.parser.add_argument('-dropLR', type=int, default=20, help='drop LR')

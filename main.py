@@ -11,10 +11,10 @@ import numpy as np
 opt = opts().parse()
 
 from datasets.face_CAD import face_CAD as Dataset
-from train import train, val, test
+from train import train, val, test, finetune
 
 def main():
-    logger = Logger(opt.logDir)
+    logger = Logger(opt.logDir, opt)
 
     # write reference and related information about this experiment into 'opt.txt'
     args = dict((name, getattr(opt, name)) for name in dir(opt)
@@ -46,6 +46,14 @@ def main():
         criterion = criterion.cuda(opt.GPU)
         #optimizer = optimizer.cuda(opt.GPU)Í
 
+    test_loader = torch.utils.data.DataLoader(
+        Dataset(opt, 'test'),
+        batch_size=1,
+        # shuffle=True if opt.Debug else False,
+        shuffle=False,
+        num_workers=1
+    )
+
     train_loader = torch.utils.data.DataLoader(
         Dataset(opt, 'train'),
         batch_size=opt.trainBatch,
@@ -60,18 +68,17 @@ def main():
         num_workers=1
     )
 
-    test_loader = torch.utils.data.DataLoader(
-        Dataset(opt, 'test'),
-        batch_size=1,
-        # shuffle=True if opt.Debug else False,
-        shuffle=False,
-        num_workers=1
-    )
-
     for epoch in range(1, opt.nEpochs + 1):
         log_dict_train, _ = train(epoch, opt, train_loader, model, logger.tensorboard, optimizer)
         if epoch % opt.valIntervals == 0:
             log_dict_val, _ = val(epoch, opt, val_loader, model, logger.tensorboard)
+            # 测试输出
+            if opt.test:
+                test_accuracy, preds = test(0, opt, test_loader, model, logger.tensorboard)
+                torch.save({'opt': opt, 'preds': preds}, os.path.join(opt.logDir, 'preds.pth'))  # opt.saveDir
+                logger.f.write(
+                    'best val auc: {}, test auc: {}, test accuracy: {}\n'.format(opt.best_val_auc, opt.best_test_auc,
+                                                                               test_accuracy))
         if epoch % opt.dropLR == 0:
             lr = opt.LR * (0.1 ** (epoch // opt.dropLR))
             print('Drop LR to', lr)
@@ -79,11 +86,7 @@ def main():
                 param_group['lr'] = lr
         if log_dict_train['Acc'] >= 99:
             break
-    path = os.path.join(ref.expDir, opt.expID, 'best_val_auc.checkpoint')
-    net_load = torch.load(path)
-    model.load_state_dict(net_load['state_dict'])
-    test( epoch, opt, test_loader, model, logger.tensorboard)
-    logger.f.write('best val auc: {}, test auc: {}'.format(opt.best_val_auc, opt.best_test_auc))
+        optimizer = finetune(epoch, opt, model)
     logger.f.close()
 
 '''

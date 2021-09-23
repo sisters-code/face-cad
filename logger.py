@@ -10,12 +10,12 @@ except ImportError:
     from io import BytesIO  # Python 3.x
 
 class Logger(object):
-    def __init__(self, log_dir):
+    def __init__(self, log_dir, opt):
         """Create a summary writer logging to log_dir."""
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
         self.f = open(os.path.join(log_dir, 'log.txt'), 'w')
-        self.tensorboard = SummaryWriter('./log')
+        self.tensorboard = SummaryWriter(os.path.join('./log/', opt.arch, opt.expID))
 
     def write(self, txt):
         self.f.write(txt)

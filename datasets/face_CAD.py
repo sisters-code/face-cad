@@ -4,6 +4,7 @@ import ref
 import os
 import random
 from PIL import Image, ImageDraw
+import cv2
 import json
 
 
@@ -154,6 +155,36 @@ class face_CAD(data.Dataset):
         print('pos/neg ratio is {}/{}={}'.format(self.pos_num, self.neg_num, self.pos_num * 1.0 / self.neg_num))
         print('Loaded {} {} samples'.format(split, self.nSamples))
 
+    #输入人脸的灰度图
+    def LoadImage_1channels(self, index):
+        img_file = self.annot['imgPath'][index]
+        img_pil = Image.open(img_file).convert('L')
+        img_pil = img_pil.resize((ref.oriRes, ref.oriRes), Image.ANTIALIAS)
+
+        if self.split == 'train':
+            # data augmentation
+            rnd = np.random.rand()
+            crop_idx = np.random.randint(len(self.opt.cropIdx))
+            img_crop = img_pil.crop(self.opt.cropIdx[crop_idx])
+            if rnd > 0.5:
+                img_crop = img_crop.transpose(Image.FLIP_LEFT_RIGHT)
+            # add rotation augmentation
+            rotate_angle = (np.random.rand() * 2 - 1) * 30  # rotation range: [-30, 30)
+            img_crop = img_crop.rotate(rotate_angle)
+        else:
+            img_crop = img_pil.crop(self.opt.cropIdx[-1])
+        img_crop = np.array(img_crop)
+        #创建CLAHE对象，用于提升对比度
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        # 限制对比度的自适应阈值均衡化
+        img_crop = clahe.apply(img_crop)
+        # 使用全局直方图均衡化
+        img_crop = cv2.equalizeHist(img_crop)
+
+        img_crop = np.expand_dims(img_crop, axis = 2)
+        img_array = img_crop.transpose(2, 0, 1).astype(np.float32) / 256.
+        return img_array
+
     def LoadImage_3channels(self, index):
         img_file = self.annot['imgPath'][index]
         # img_list = ['1.JPG']
@@ -214,7 +245,9 @@ class face_CAD(data.Dataset):
         return img_array
 
     def __getitem__(self, index):
-        if self.input_channels == 3:
+        if self.input_channels == 1:
+            inp = self.LoadImage_1channels(index)
+        elif self.input_channels == 3:
             inp = self.LoadImage_3channels(index)
         elif self.input_channels == 12:
             inp = self.LoadImage(index)

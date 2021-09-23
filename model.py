@@ -51,10 +51,14 @@ def getModel(opt):
 
     optimizer = torch.optim.SGD(model.parameters(), opt.LR, momentum=0.9, weight_decay=1e-4)
 
+    return model, optimizer
+
+def load_model(opt,model):
     #将之前已经训练好的模型权重写入网络中
-    if opt.loadModel != '':
-        print("=> loading model '{}'".format(opt.loadModel))
-        checkpoint = torch.load(opt.loadModel, map_location=lambda storage, loc: storage)
+    if opt.test != '':
+        checkpoint = os.path.join(ref.expDir, opt.expID, 'best_val_auc.checkpoint')
+        print("=> loading model '{}'".format(checkpoint))
+        checkpoint = torch.load(checkpoint, map_location=lambda storage, loc: storage)
         if type(checkpoint) == type({}):
             state_dict = checkpoint['state_dict']
         else:
@@ -68,7 +72,6 @@ def getModel(opt):
         model.load_state_dict(model_dict)
 
         # model.load_state_dict(state_dict)
-    return model, optimizer
 
 
 def saveModel(path, model, optimizer=None):
