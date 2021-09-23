@@ -86,7 +86,8 @@ def main():
                 param_group['lr'] = lr
         if log_dict_train['Acc'] >= 99:
             break
-        optimizer = finetune(epoch, opt, model)
+        if epoch == 20:
+            optimizer = finetune(opt, model)
     logger.f.close()
 
 '''

@@ -101,28 +101,26 @@ def step(split, epoch, opt, dataLoader, model, tensorboard=None, optimizer=None)
             opt.best_test_auc = AUC
     return {'Loss': Loss.avg, 'Acc': Acc.avg}, label_list
 
-def finetune(epoch, opt, model):
-        if epoch == 20:
-            if opt.arch.startswith('resnet'):
-                param_name_finetune = ['fc', 'layer4']
-            elif opt.arch.startswith('vgg'):
-                param_name_finetune = ['classifier.0', 'classifier.3', 'classifier.6', 'features.31', 'features.34',
-                                       'features.35', 'features.37', 'features.38', 'features.40', 'features.41', ]
+def finetune(opt, model):
+        if opt.arch.startswith('resnet'):
+            param_name_finetune = ['fc', 'layer4']
+        elif opt.arch.startswith('vgg'):
+            param_name_finetune = ['classifier.0', 'classifier.3', 'classifier.6', 'features.31', 'features.34',
+                                   'features.35', 'features.37', 'features.38', 'features.40', 'features.41', ]
+        else:
+            raise Exception('resnet or vgg')
+        param_finetune = []
+        for name, param in model.named_parameters():
+            finetune_flag = False
+            for name_tgt in param_name_finetune:
+                if name_tgt in name:
+                    finetune_flag = True
+                    break
+            if finetune_flag:
+                param_finetune.append(param)
             else:
-                raise Exception('resnet or vgg')
-            param_finetune = []
-            for name, param in model.named_parameters():
-                finetune_flag = False
-                for name_tgt in param_name_finetune:
-                    if name_tgt in name:
-                        finetune_flag = True
-                        break
-                if finetune_flag:
-                    param_finetune.append(param)
-                else:
-                    param.requires_grad = False
-            optimizer = torch.optim.SGD(param_finetune, opt.LR, momentum=0.9, weight_decay=1e-4)
-
+                param.requires_grad = False
+        optimizer = torch.optim.SGD(param_finetune, opt.LR, momentum=0.9, weight_decay=1e-4)
         return optimizer
 
 
